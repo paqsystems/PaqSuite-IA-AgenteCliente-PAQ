@@ -23,6 +23,10 @@
     <ProjectReference Include="..\PaqContracts\PaqContracts.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Sql\dictionary\**\*.sql" />
+    <EmbeddedResource Include="Sql\company\**\*.sql" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="PaqAgent.Tests" />
   </ItemGroup>
   <ItemGroup>

@@ -58,12 +58,20 @@ dotnet run --project src\PaqGateway --urls http://127.0.0.1:5100
 Firefox: http://127.0.0.1:5100 → 404 OK (conecta).
 
 2) Agente
-Servicio/app del agente en marcha, con el mismo agent_id / token que la fila lenovo en 192.168.41.2 / PAQSYSTEMS.
+a) Cambiar el appsettings.local.json
+ `"gatewayUrl": "https://gateway.paqsystems.com/agent-hub",`
+  por
+ `"gatewayUrl": "http://127.0.0.1:5100/agent-hub",`
+b) Servicio/app del agente en marcha, con el mismo agent_id / token que la fila lenovo en 192.168.41.2 / PAQSYSTEMS.
 
 3) BE Tango (preparacion)
-.env con AGENT_GATEWAY_ENABLED=true, AGENT_GATEWAY_URL al gateway local 
-(en tu máquina ya figura http://127.0.0.1:5100 + key), 
-y la BD de tenants/empresas_conexion donde está lenovo con agent_id.
+Cambiar en backend/.env (en lab) o en Environment de Forge
+a) AGENT_GATEWAY_ENABLED=true
+b) cambiar la variable : 
+ `AGENT_GATEWAY_URL=http://10.0.1.224:5100`
+ por
+ `AGENT_GATEWAY_URL=http://127.0.0.1:5100`
+c) la BD de tenants/empresas_conexion donde está lenovo con agent_id.
 
 4) FE Tango (Preparación)
 En frontend/.env:
@@ -92,3 +100,46 @@ Network: POST a http://127.0.0.1:8000/api/v1/auth/login
 Terminal artisan: tiene que aparecer ese POST.
 
 Si algo falla, pará en el primer paso que no cumpla (health / 5100 / POST en artisan) y lo vemos.
+
+
+# Cómo pasar a versión productiva
+
+1) Gateway
+No hay que hacer nada. ya está activo en AWS
+
+2) Agente
+Cambiar el appsettings.local.json
+ `"gatewayUrl": "http://127.0.0.1:5100/agent-hub",`
+ por
+ `"gatewayUrl": "https://gateway.paqsystems.com/agent-hub",`
+ 
+ 3) Host
+ Cambiar en backend/.env (en lab) o en Environment de Forge
+ `AGENT_GATEWAY_URL=http://127.0.0.1:5100`
+ por
+ `AGENT_GATEWAY_URL=http://10.0.1.224:5100`
+
+# Cómo entrar por SSH al gateway AWS
+
+Desde PowerShell:
+
+```powershell
+ssh -i "$env:USERPROFILE\.ssh\pq-ia-gateway.pem" ec2-user@3.142.236.237
+```
+
+# Cómo limpiar la variable ´sessionStorage'
+
+En Firefox:
+
+## Alternativa 1
+- Presiona F12 para abrir las herramientas de desarrollador.
+- Ve a Almacenamiento.
+- Abre Almacenamiento de sesión → http://127.0.0.1:5173.
+- Busca paq_cliente.
+- Clic derecho → Eliminar.
+- Recarga la página con Ctrl + F5.
+
+## Alternativa 2
+También puedes hacerlo desde la consola:
+- sessionStorage.removeItem('paq_cliente');
+- location.reload();

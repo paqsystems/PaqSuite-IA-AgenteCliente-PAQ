@@ -50,6 +50,7 @@ public static class JobOperations
     public const string PedidosPendientes = "pedidos.pendientes";
     public const string ComprobantesRecientes = "comprobantes.recientes";
     public const string TangoVersion = "tango.version";
+    public const string ParametrosUpdate = "parametros.update";
 }
 
 public sealed class JobRequest

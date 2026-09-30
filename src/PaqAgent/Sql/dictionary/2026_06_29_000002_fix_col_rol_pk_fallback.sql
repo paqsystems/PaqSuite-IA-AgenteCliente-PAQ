@@ -8,8 +8,6 @@ AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
-    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
-    SET LOCK_TIMEOUT 8000;
 
     /* --- Variables de usuario --- */
     DECLARE @UserId                   INT;

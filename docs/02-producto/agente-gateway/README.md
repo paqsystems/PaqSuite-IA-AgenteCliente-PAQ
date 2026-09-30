@@ -24,6 +24,7 @@ Análisis y fase 2 (no alteran el MVP de conectividad):
 
 | Archivo | Para qué |
 |---------|----------|
+| [../actualizacion-agentes-release-train.md](../actualizacion-agentes-release-train.md) | Release train, flota masiva, enlace Framework doc 34 |
 | [plan-ciclo-sql-y-updates.md](plan-ciclo-sql-y-updates.md) | Análisis fase 2 SQL/update |
 | [../circuito-actualizacion-agente-funcional.md](../circuito-actualizacion-agente-funcional.md) | Relato funcionales: oleadas, handshake, staff, Forge |
 | [../circuito-objetos-sql-agente-funcional.md](../circuito-objetos-sql-agente-funcional.md) | Relato funcionales: objetos SQL en el mismo exe |

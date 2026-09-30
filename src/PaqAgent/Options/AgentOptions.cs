@@ -7,6 +7,7 @@ public sealed class AgentOptions
     public string AgentToken { get; set; } = "";
     public string GatewayUrl { get; set; } = "";
     public SqlOptions Sql { get; set; } = new();
+    public SqlMigrationOptions SqlMigrations { get; set; } = new();
 
     public bool HasRequiredIdentity =>
         !string.IsNullOrWhiteSpace(AgentId)
@@ -17,6 +18,12 @@ public sealed class AgentOptions
     public bool HasSqlConfig =>
         !string.IsNullOrWhiteSpace(Sql.Server)
         && !string.IsNullOrWhiteSpace(Sql.Database);
+}
+
+public sealed class SqlMigrationOptions
+{
+    public bool Enabled { get; set; } = true;
+    public int CommandTimeoutSeconds { get; set; } = 30;
 }
 
 public sealed class SqlOptions

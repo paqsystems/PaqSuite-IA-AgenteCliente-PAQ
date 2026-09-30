@@ -8,11 +8,13 @@ using PaqAgent.Auth;
 using PaqAgent.Clientes;
 using PaqAgent.Comprobantes;
 using PaqAgent.Diagnostics;
+using PaqAgent.Database;
 using PaqAgent.Informes;
 using PaqAgent.Menu;
 using PaqAgent.MovimientosTesoreria;
 using PaqAgent.Options;
 using PaqAgent.OrdenesCompra;
+using PaqAgent.Parametros;
 using PaqAgent.Partes;
 using PaqAgent.Pedidos;
 using PaqAgent.PedidosVenta;
@@ -40,6 +42,7 @@ public sealed class AgentGatewayConnector : BackgroundService
     private readonly ILogger<AgentGatewayConnector> logger;
     private readonly TimeProvider timeProvider;
     private readonly DiagnosticsRunner diagnosticsRunner;
+    private readonly ISqlMigrationRunner sqlMigrationRunner;
     private readonly AuthLoginRunner authLoginRunner;
     private readonly AuthChangePasswordRunner authChangePasswordRunner;
     private readonly MenuAuthorizedRunner menuAuthorizedRunner;
@@ -55,6 +58,7 @@ public sealed class AgentGatewayConnector : BackgroundService
     private readonly InformesGatewayRunner informesGatewayRunner;
     private readonly AcopiosGatewayRunner acopiosGatewayRunner;
     private readonly PartesGatewayRunner partesGatewayRunner;
+    private readonly ParametrosGatewayRunner parametrosGatewayRunner;
     private readonly OrdenesTrabajoCreateRunner ordenesTrabajoCreateRunner;
     private readonly OrdenesTrabajoUpdateRunner ordenesTrabajoUpdateRunner;
     private readonly OrdenesTrabajoDeleteRunner ordenesTrabajoDeleteRunner;
@@ -108,6 +112,7 @@ public sealed class AgentGatewayConnector : BackgroundService
         ILogger<AgentGatewayConnector> logger,
         TimeProvider timeProvider,
         DiagnosticsRunner diagnosticsRunner,
+        ISqlMigrationRunner sqlMigrationRunner,
         AuthLoginRunner authLoginRunner,
         AuthChangePasswordRunner authChangePasswordRunner,
         MenuAuthorizedRunner menuAuthorizedRunner,
@@ -123,6 +128,7 @@ public sealed class AgentGatewayConnector : BackgroundService
         InformesGatewayRunner informesGatewayRunner,
         AcopiosGatewayRunner acopiosGatewayRunner,
         PartesGatewayRunner partesGatewayRunner,
+        ParametrosGatewayRunner parametrosGatewayRunner,
         OrdenesTrabajoCreateRunner ordenesTrabajoCreateRunner,
         OrdenesTrabajoUpdateRunner ordenesTrabajoUpdateRunner,
         OrdenesTrabajoDeleteRunner ordenesTrabajoDeleteRunner,
@@ -171,6 +177,7 @@ public sealed class AgentGatewayConnector : BackgroundService
         this.logger = logger;
         this.timeProvider = timeProvider;
         this.diagnosticsRunner = diagnosticsRunner;
+        this.sqlMigrationRunner = sqlMigrationRunner;
         this.authLoginRunner = authLoginRunner;
         this.authChangePasswordRunner = authChangePasswordRunner;
         this.menuAuthorizedRunner = menuAuthorizedRunner;
@@ -186,6 +193,7 @@ public sealed class AgentGatewayConnector : BackgroundService
         this.informesGatewayRunner = informesGatewayRunner;
         this.acopiosGatewayRunner = acopiosGatewayRunner;
         this.partesGatewayRunner = partesGatewayRunner;
+        this.parametrosGatewayRunner = parametrosGatewayRunner;
         this.ordenesTrabajoCreateRunner = ordenesTrabajoCreateRunner;
         this.ordenesTrabajoUpdateRunner = ordenesTrabajoUpdateRunner;
         this.ordenesTrabajoDeleteRunner = ordenesTrabajoDeleteRunner;
@@ -247,6 +255,8 @@ public sealed class AgentGatewayConnector : BackgroundService
             logger.LogError("PaqAgent rechaza AgentToken prohibido (dev-agent-token). Usar token real de alta.");
             return;
         }
+
+        await sqlMigrationRunner.RunAsync(agentOptions, stoppingToken).ConfigureAwait(false);
 
         var sqlServerName = agentOptions.HasSqlConfig ? agentOptions.Sql.Server : null;
 
@@ -709,6 +719,26 @@ public sealed class AgentGatewayConnector : BackgroundService
                     request.Parameters,
                     request.TimeoutSeconds,
                     CancellationToken.None)
+                .ConfigureAwait(false);
+            result = new JobResult
+            {
+                TraceId = request.TraceId,
+                JobId = request.JobId,
+                Status = outcome.Status,
+                Data = outcome.Data,
+                ErrorCode = outcome.ErrorCode,
+                ErrorMessage = outcome.ErrorMessage,
+                DurationMs = (long)(timeProvider.GetUtcNow() - started).TotalMilliseconds
+            };
+        }
+        else if (string.Equals(request.Operation, JobOperations.ParametrosUpdate, StringComparison.Ordinal))
+        {
+            logger.LogInformation(
+                "Ejecutando parametros.update jobId={JobId} traceId={TraceId}",
+                request.JobId,
+                request.TraceId);
+            var outcome = await parametrosGatewayRunner
+                .RunAsync(agentOptions, request.Parameters, request.TimeoutSeconds, CancellationToken.None)
                 .ConfigureAwait(false);
             result = new JobResult
             {

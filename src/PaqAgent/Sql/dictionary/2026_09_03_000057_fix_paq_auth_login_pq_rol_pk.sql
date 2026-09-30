@@ -1,5 +1,15 @@
 /*
 ================================================================================
+  000057 — Fix guard pq_rol PK en PAQ_Auth_Login
+
+  Extiende el guard de 000056 para aceptar la PK `id` en dbo.pq_rol (además de
+  IDRol e id_rol). Ajusta la detección dinámica de @ColRolPK al mismo orden:
+  IDRol → id_rol → id.
+
+  El resto del SP es idéntico a 000056.
+================================================================================
+
+================================================================================
   PAQ_Auth_Login
   Validación de login por código de usuario (sin password en el SP).
 
@@ -30,11 +40,12 @@
     2) Empresas — 0..N filas (solo datos cuando status = 'OK'; vacío en otros casos)
 
   Estados posibles en header.status:
-    NOT_FOUND   — codigo inexistente
-    INACTIVE    — activo = 0 OR inhabilitado = 1
-    NO_EMPRESAS — usuario válido pero sin empresas habilitadas
-    OK          — login candidato (Laravel debe validar password)
-    SQL_ERROR   — fallo inesperado (mensaje genérico en error_message)
+    SCHEMA_MISSING — tabla o columna requerida ausente
+    NOT_FOUND      — codigo inexistente
+    INACTIVE       — activo = 0 OR inhabilitado = 1
+    NO_EMPRESAS    — usuario válido pero sin empresas habilitadas
+    OK             — login candidato (Laravel debe validar password)
+    SQL_ERROR      — fallo inesperado (mensaje genérico en error_message)
 ================================================================================
 */
 CREATE OR ALTER PROCEDURE dbo.PAQ_Auth_Login
@@ -43,6 +54,163 @@ AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
+
+    /* ------------------------------------------------------------------
+       Guard exhaustivo de esquema — tablas y columnas requeridas
+       ------------------------------------------------------------------ */
+    IF OBJECT_ID(N'dbo.USERS', N'U') IS NULL
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'id'
+        )
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'codigo'
+        )
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'name_user'
+        )
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'email'
+        )
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'password_hash'
+        )
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'locale'
+        )
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'menu_abrir_nueva_pestana'
+        )
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'sidebar_collapsed'
+        )
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'activo'
+        )
+        OR NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'USERS' AND COLUMN_NAME = N'inhabilitado'
+        )
+        OR OBJECT_ID(N'dbo.pq_permiso', N'U') IS NULL
+        OR (
+            NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_permiso' AND COLUMN_NAME = N'IDRol'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_permiso' AND COLUMN_NAME = N'id_rol'
+            )
+        )
+        OR (
+            NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_permiso' AND COLUMN_NAME = N'IDEmpresa'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_permiso' AND COLUMN_NAME = N'id_empresa'
+            )
+        )
+        OR (
+            NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_permiso' AND COLUMN_NAME = N'IDUsuario'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_permiso' AND COLUMN_NAME = N'id_usuario'
+            )
+        )
+        OR OBJECT_ID(N'dbo.pq_rol', N'U') IS NULL
+        OR (
+            NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_rol' AND COLUMN_NAME = N'IDRol'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_rol' AND COLUMN_NAME = N'id_rol'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_rol' AND COLUMN_NAME = N'id'
+            )
+        )
+        OR (
+            NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_rol' AND COLUMN_NAME = N'AccesoTotal'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_rol' AND COLUMN_NAME = N'acceso_total'
+            )
+        )
+        OR OBJECT_ID(N'dbo.pq_empresa', N'U') IS NULL
+        OR (
+            NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_empresa' AND COLUMN_NAME = N'IDEmpresa'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_empresa' AND COLUMN_NAME = N'id_empresa'
+            )
+        )
+        OR (
+            NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_empresa' AND COLUMN_NAME = N'NombreEmpresa'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_empresa' AND COLUMN_NAME = N'nombre_empresa'
+            )
+        )
+        OR (
+            NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_empresa' AND COLUMN_NAME = N'NombreBD'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = N'pq_empresa' AND COLUMN_NAME = N'nombre_bd'
+            )
+        )
+    BEGIN
+        SELECT
+            N'SCHEMA_MISSING'           AS [status],
+            CAST(NULL AS INT)           AS [user_id],
+            CAST(NULL AS NVARCHAR(100)) AS [codigo],
+            CAST(NULL AS NVARCHAR(255)) AS [name_user],
+            CAST(NULL AS NVARCHAR(255)) AS [email],
+            CAST(NULL AS NVARCHAR(255)) AS [password_hash],
+            N'es'                       AS [locale],
+            CAST(0 AS BIT)              AS [menu_abrir_nueva_pestana],
+            CAST(0 AS BIT)              AS [sidebar_collapsed],
+            CAST(0 AS BIT)              AS [es_admin],
+            CAST(NULL AS NVARCHAR(20))  AS [redirectTo],
+            N'Esquema de base de datos incompleto. Contacte al administrador.' AS [error_message];
+
+        SELECT
+            CAST(NULL AS INT)           AS [id],
+            CAST(NULL AS NVARCHAR(100)) AS [nombreEmpresa],
+            CAST(NULL AS NVARCHAR(100)) AS [nombreBd],
+            CAST(NULL AS NVARCHAR(100)) AS [theme],
+            CAST(NULL AS NVARCHAR(100)) AS [imagen]
+        WHERE 1 = 0;
+
+        RETURN;
+    END
 
     /* --- Variables de usuario --- */
     DECLARE @UserId                   INT;
@@ -127,7 +295,15 @@ BEGIN
                 WHERE TABLE_SCHEMA = N'dbo'
                   AND TABLE_NAME = N'pq_rol'
                   AND COLUMN_NAME = N'IDRol'
-            ) THEN N'IDRol' ELSE N'id_rol' END;
+            ) THEN N'IDRol'
+            WHEN EXISTS (
+                SELECT 1
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = N'dbo'
+                  AND TABLE_NAME = N'pq_rol'
+                  AND COLUMN_NAME = N'id_rol'
+            ) THEN N'id_rol'
+            ELSE N'id' END;
 
         SELECT @ColRolAccesoTotal = CASE
             WHEN EXISTS (
