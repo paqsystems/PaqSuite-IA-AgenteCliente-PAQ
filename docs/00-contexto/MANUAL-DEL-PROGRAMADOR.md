@@ -816,6 +816,41 @@ php artisan migrate --database=tenants_catalog --path=database/migrations/tenant
 
 `cliente` y `nombre` **no tienen que existir de antemano**. Si el tenant **ya** estaba en SQL directo, usá **el mismo** `cliente` para no crear un huérfano.
 
+#### Paso a paso (para Legos)
+
+1) Powershell (como administrador)
+    a) ssh -i "$env:USERPROFILE\.ssh\id_ed25519" forge@13.59.42.169
+     ó ssh forge@13.59.42.169
+    b) Debe aparecer el prompt : forge@paq-2021:~$
+
+2) ir al sitio : 
+  ls /home/forge
+  sudo find /home/forge -name artisan -type f 2>/dev/null
+
+  sudo -iu forge
+  cd /home/forge/<dominio-del-sitio>
+  cd backend    # si artisan está en backend/
+
+  <dominio-del-sitio> : en principio : "tango-paqsystems.on-forge.com"
+
+3) Comprobante que el comando existe : 
+   a) php artisan list --raw | grep alta-agente
+   b) Si no existe, dar de alta : 
+   php artisan empresas-conexion:alta-agente <slug> "<Nombre visible>"
+
+   si ya existe el cliente y hay que cambiar el token : 
+   php artisan empresas-conexion:alta-agente <slug> "<Nombre visible>" --force-replace
+
+   <slug> : ejemplo : "tecser", "lacapol", "tecmetal"
+   <Nombre visible> : por ejemplo : "Tango Tecser" - "Tango TecMetal"
+
+4) Anotá lo que imprime en claro una sola vez:
+client_id = el slug
+agent_id = {slug}-agent-01
+token = 64 caracteres hex (no dev-agent-token)
+
+estos datos, se cargan en la instalación del agente.
+
 ### 4.b) Instalación del agente en el cliente
 
 Con los tres valores del artisan, en el Windows **al lado de SQL** (o en un Windows de la misma LAN que alcance SQL):
