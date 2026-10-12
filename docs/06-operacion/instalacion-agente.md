@@ -4,10 +4,11 @@
 |-------|--------|
 | Estado | Instructivo **final** (HU-008 / TR-009) |
 | Público objetivo | Administrador del servidor SQL del cliente |
-| Descarga | Landing pública TANGO — [urls-deploy.md](urls-deploy.md) (D9; URL exacta = Q-D9-1) |
+| Descarga | `https://descarga.paqsystems.com/agentes/` — [urls-deploy.md](urls-deploy.md) (D9; Q-D9-1 cerrada) |
 | Empaquetado (build) | [empaquetado-instalador.md](empaquetado-instalador.md) |
 | Gateway (operador) | [deploy-gateway-aws.md](deploy-gateway-aws.md) |
 | Lab desarrollo | [lab-local.md](lab-local.md) |
+| Alta / token | [MANUAL-DEL-PROGRAMADOR](../00-contexto/MANUAL-DEL-PROGRAMADOR.md) § 4.a (resumen al pie, §8) |
 
 **Prohibido:** Tailscale; IP pública del SQL hacia Internet; abrir 1433 a Internet; `dev-agent-token`; editar `appsettings.local.json` a mano en producción; fallback SQL modo agente.
 
@@ -17,11 +18,11 @@
 
 Copiable para el operador PaqSystems + admin del servidor:
 
-1. Alta modo agente en Laravel (TANGO) → obtener **AgentId**, **ClientId**, **AgentToken** (el token se muestra **una sola vez**).
+1. Alta modo agente en Laravel (TANGO) → obtener **AgentId**, **ClientId**, **AgentToken** (el token se muestra **una sola vez**). Cómo: **§8** y fuente [MANUAL § 4.a](../00-contexto/MANUAL-DEL-PROGRAMADOR.md).
 2. Confirmar Gateway de producción reachable: `https://gateway.paqsystems.com/agent-hub`.
 3. Entregar al admin del servidor: los tres valores + esta guía + URL de descarga.
 4. En el servidor Windows del cliente: instalar **.NET 8 Desktop Runtime x64** si el instalador lo pide (o ya está).
-5. Descargar **`PaqAgentSetup.exe`** desde la landing TANGO, verificar **SHA256**, ejecutar (no descomprimir).
+5. Descargar **`PaqAgentSetup.exe`** desde `https://descarga.paqsystems.com/agentes/`, verificar **SHA256**, ejecutar (no descomprimir).
 6. Ejecutar `PaqAgentSetup.exe` **como Administrador**.
 7. Completar el asistente: runtime → credenciales (identidad + SQL + Gateway) → Probar SQL → Probar Gateway → Instalar.
 8. Verificar servicio Windows **`PaqAgent`** en estado **Running** (inicio automático).
@@ -34,8 +35,8 @@ Copiable para el operador PaqSystems + admin del servidor:
 
 | Ítem | Valor |
 |------|-------|
-| Canal | Landing **pública** TANGO (Laravel / PaqSuite), sin login (D9) |
-| URL canónica | `https://<host-tango>/descargas/agente` (**Q-D9-1** — host exacto pendiente; ver [urls-deploy.md](urls-deploy.md)) |
+| Canal | Landing **pública** en `descarga.paqsystems.com`, sin login (D9) |
+| URL canónica | `https://descarga.paqsystems.com/agentes/` (Q-D9-1 cerrada; [urls-deploy.md](urls-deploy.md); alta AWS: [descarga-agentes-aws.md](descarga-agentes-aws.md)) |
 | Asset | `PaqAgentSetup.exe` (un solo exe autoejecutable; PaqAgent va embebido) |
 | Integridad | SHA256 en la misma página o archivo `PaqAgentSetup.exe.sha256` (D9) |
 | Gateway URL por defecto en el instalador | `https://gateway.paqsystems.com/agent-hub` (editable) |
@@ -74,9 +75,9 @@ El paquete del instalador es **self-contained**; igual conviene tener Desktop Ru
 
 | Campo en el instalador | Origen |
 |-------------------------|--------|
-| AgentId | Alta Laravel (HU-001) |
-| ClientId | Alta Laravel |
-| AgentToken | Alta Laravel (**una vez**; password-char; sin default) |
+| AgentId | Alta Laravel (HU-001); comando en **§8** |
+| ClientId | Alta Laravel; mismo comando |
+| AgentToken | Alta Laravel (**una vez**; password-char; sin default). Obtención: **§8** |
 | Gateway URL | Default de fábrica prod; lab puede usar `http://127.0.0.1:5100/agent-hub` |
 | Servidor / base / usuario / contraseña SQL | Admin del servidor (SQL local del cliente) |
 | Puerto SQL | Opcional (vacío = 1433); si el servidor es instancia con `\`, no hace falta puerto |
@@ -154,9 +155,45 @@ En PaqSuite: el cliente/agente debe figurar **online** tras el heartbeat (TTL de
 
 ## Relación con el alta en Laravel
 
-1. Operador PaqSystems da de alta el tenant modo agente y obtiene AgentId / ClientId / AgentToken.
+1. Operador PaqSystems da de alta el tenant modo agente y obtiene AgentId / ClientId / AgentToken (**§8**).
 2. Entrega esos datos + link de descarga al administrador del servidor.
 3. El administrador descarga, verifica SHA256, instala y deja el servicio corriendo.
 4. PaqSuite debe ver el agente **online**.
 
 Sin alta previa no hay token válido para el instalador.
+
+---
+
+## 8. Cómo obtener AgentId, ClientId y AgentToken
+
+Fuente canónica (detalle, cifrado, rotación, troubleshooting de `artisan`): [MANUAL-DEL-PROGRAMADOR](../00-contexto/MANUAL-DEL-PROGRAMADOR.md) **§ 4.a**. Lo de abajo es el recorte operativo para este instructivo. Si hay conflicto, manda el manual.
+
+El comando se corre en **TANGO / Forge** (sitio Laravel), **no** en la EC2 del Gateway ni en el Windows del cliente. Repo `PaqSuite-IA-TANGO`, rama **`FRAMEWORK`** deployada. El usuario `ubuntu` de la consola AWS arranca en `~`: hay que estar en la carpeta donde está `artisan` (en producción suele ser `/home/forge/tango-paqsystems.on-forge.com/backend`).
+
+```bash
+sudo -iu forge
+cd /home/forge/tango-paqsystems.on-forge.com/backend   # ajustar si el sitio tiene otro path
+php artisan list --raw | grep alta-agente
+php artisan empresas-conexion:alta-agente <slug> "<Nombre visible>"
+```
+
+Ejemplo: `php artisan empresas-conexion:alta-agente tecser "Tec-Ser"`.
+
+Solo dos argumentos: `cliente` (slug = `X-Paq-Cliente` / subdominio) y `nombre` (etiqueta visible). El comando:
+
+1. Normaliza el slug; `client_id` = slug; `agent_id` = `{client_id}-agent-01` (un agente por tenant).
+2. Genera un token de 64 hex. **Prohibido** `dev-agent-token`. Un INSERT SQL a mano en claro **no alcanza**.
+3. INSERT o UPDATE en `empresas_conexion` (`activo=true`; sin `host`/`port` SQL remoto en modo agente).
+4. Imprime **`agent_id`**, **`client_id`** y el **token en claro una sola vez**. En BD queda cifrado.
+
+Anotar los tres valores en un lugar seguro (no en un ticket público). El token no se vuelve a imprimir. Esos son los campos AgentId / ClientId / AgentToken del instalador.
+
+Si ya había agente y hay que rotar (el token anterior deja de servir):
+
+```bash
+php artisan empresas-conexion:alta-agente <slug> "<Nombre visible>" --force-replace
+```
+
+Si `grep alta-agente` no lista el comando: esa rama **no está deployada**. Ver el manual § 4.a (CD `FRAMEWORK` y, si hace falta, migrate del catálogo).
+
+SSH paso a paso (IP del Forge, `id_ed25519`, prompt `forge@paq-2021`): mismo manual, apartado **«Paso a paso (para Legos)»** dentro de § 4.a.

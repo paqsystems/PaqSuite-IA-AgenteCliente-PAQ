@@ -7,7 +7,7 @@ Artefacto de cara al cliente: **un** exe autoejecutable. El administrador no des
 | SPEC | [SPEC-AGW-001](../02-producto/SPEC-AGW-001-producto.md) §5.1 |
 | Decisión | [D9](../02-producto/decisiones-tecnicas.md) |
 | Porqué | [MANUAL-DEL-PROGRAMADOR](../00-contexto/MANUAL-DEL-PROGRAMADOR.md) § D9 |
-| Canal cliente | Landing pública TANGO (URL exacta = Q-D9-1) |
+| Canal cliente | `https://descarga.paqsystems.com/agentes/` (Q-D9-1 cerrada) |
 | Asset | `PaqAgentSetup.exe` + `PaqAgentSetup.exe.sha256` |
 
 **Prohibido entregar al cliente:** zip suelto, SFX 7-Zip/WinRAR, carpeta `agent/` suelta.
@@ -74,12 +74,13 @@ Comparar con el hash publicado en la landing TANGO (D9). No depender de un `late
 
 ---
 
-## Publicación en TANGO (no se codea aquí)
+## Publicación (S3 + CloudFront)
 
-Cuando Q-D9-1 cierre la URL:
+Runbook: [descarga-agentes-aws.md](descarga-agentes-aws.md).
 
-1. Copiar `PaqAgentSetup.exe` y `.sha256` al disco público (Forge `storage` / S3).
-2. Landing `https://<host-tango>/descargas/agente`: versión, fecha, SHA256, botón, enlace al instructivo.
-3. Directo: `https://<host-tango>/descargas/agente/PaqAgentSetup.exe`.
+1. `.\scripts\pack-installer.ps1` → `artifacts/`.
+2. Subir exe + `.sha256` (+ `index.html` si cambió) al prefix `agentes/` del bucket.
+3. Invalidar CloudFront `/agentes/*`.
+4. URLs: `https://descarga.paqsystems.com/agentes/` y `…/agentes/PaqAgentSetup.exe`.
 
-GitHub Releases, si se usa, es **espejo interno de CI**. No es la URL del administrador Tango.
+GitHub Releases, si se usa, es **espejo interno de CI**. No es la URL del administrador Tango. Un botón en TANGO, si existe, apunta a estas mismas URLs.

@@ -5,14 +5,14 @@
 | Gateway producción (hub SignalR) | https://gateway.paqsystems.com/agent-hub |
 | Gateway lab | http://127.0.0.1:5100/agent-hub |
 | Gateway interno (Laravel → jobs/status) | `http://10.0.1.224:5100` (instancia *Paq-Gateway-IA*; ver ficha) |
-| Descarga instalador (MVP, **público**, D9) | `https://<host-tango>/descargas/agente` (**Q-D9-1** — host exacto pendiente) |
-| Asset instalador | `PaqAgentSetup.exe` (+ `PaqAgentSetup.exe.sha256` en la misma landing) |
+| Descarga instalador (MVP, **público**, D9 / Q-D9-1 **cerrada**) | `https://descarga.paqsystems.com/agentes/` |
+| Asset instalador | `https://descarga.paqsystems.com/agentes/PaqAgentSetup.exe` (+ `.sha256` al lado) |
 
 Notas:
 
 - Hostname ops real (*2026-09-05*): **gateway.paqsystems.com** (zona Route 53 `paqsystems.com`). El SPEC histórico decía `gateway.paqsuite.com` (dominio no presente en la cuenta).
-- El instalador del agente se descarga desde la **landing pública TANGO** en cada servidor nuevo; no hace falta clonar el código ni descomprimir zip. Verificar SHA256 (D9). Empaquetado: [empaquetado-instalador.md](empaquetado-instalador.md). Justificación: [MANUAL-DEL-PROGRAMADOR](../00-contexto/MANUAL-DEL-PROGRAMADOR.md) § D9.
-- **Q-D9-1:** cuando el operador fije host y path, reemplazar el placeholder `<host-tango>` **solo** aquí, en D9 y en [instalacion-agente.md](instalacion-agente.md). No reabrir el formato del artefacto.
+- El instalador se descarga de **`https://descarga.paqsystems.com/agentes/`** (S3 + CloudFront, sin login). No clonar código ni descomprimir zip. SHA256 (D9). Empaquetado: [empaquetado-instalador.md](empaquetado-instalador.md). Alta del host: [descarga-agentes-aws.md](descarga-agentes-aws.md). Justificación: [MANUAL-DEL-PROGRAMADOR](../00-contexto/MANUAL-DEL-PROGRAMADOR.md) § D9.
+- **Q-D9-1 cerrada 2026-10-12:** host `descarga.paqsystems.com`, path `/agentes`. Un botón futuro en TANGO apunta a **la misma** URL. No reabrir el formato del artefacto (`PaqAgentSetup.exe`).
 - GitHub Releases no es el canal de cara al cliente (puede usarse como espejo interno de CI).
 - Instructivo cliente: [instalacion-agente.md](instalacion-agente.md).
 - Laravel habla al Gateway por URL **interna** VPC (no Tailscale ni el hostname público para `/internal/*`).
