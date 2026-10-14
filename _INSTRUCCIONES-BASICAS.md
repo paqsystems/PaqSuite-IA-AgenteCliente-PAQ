@@ -1,4 +1,4 @@
-# Cómo instalar agente y gateway
+# Cómo instalar agente y gateway xx
 
 Ver `docs\06-operacion\README.md`
 
@@ -8,6 +8,8 @@ en Resumen :
 - Gateway 
     (corto) :`docs/06-operacion/deploy-gateway-aws.md`
     (exhaustivo) : `docs/06-operacion/deploy/instalacion-exhaustiva-paq-gateway-ia.md`
+- Ambiente DEV (pre-prod, un solo agente de test): MANUAL § 4.e · instalacion-agente.md §9
+    Ficha de la EC2 (una sola vez): `docs/06-operacion/ficha-gateway-dev.md`
 
 # Reinstalación Agente (manual)
 
@@ -119,13 +121,62 @@ Cambiar el appsettings.local.json
  por
  `AGENT_GATEWAY_URL=http://10.0.1.224:5100`
 
-# Cómo entrar por SSH al gateway AWS
+# Ambiente DEV (pre-prod)
 
-Desde PowerShell:
+No es lab (`127.0.0.1`). Es AWS real, separado de prod. Mismo Cloudsmith / mismo exe que va a producción.
+
+## Distinciones
+
+| Pieza | Prod | DEV |
+|-------|------|-----|
+| Forge | `tango-paqsystems.on-forge.com` | `tango-paqsystems-dev.on-forge.com` |
+| Hub agente `gatewayUrl` | `https://gateway.paqsystems.com/agent-hub` | `https://gateway-dev.paqsystems.com/agent-hub` |
+| Forge `AGENT_GATEWAY_URL` | `http://10.0.1.224:5100` | `http://10.0.1.22:5100` |
+| Vercel `VITE_API_URL` | API prod | `https://tango-paqsystems-dev.on-forge.com/api` |
+| SSH Gateway | `ec2-user@3.142.236.237` | `ec2-user@16.58.164.132` |
+
+## Token
+
+```bash
+cd /home/forge/tango-paqsystems-dev.on-forge.com/current/backend
+php8.1 artisan empresas-conexion:alta-agente <slug> "<Nombre visible>"
+```
+
+Esos tres valores van al agente de **test**. No copiar `empresas_conexion` desde prod.
+
+## Agente (máquina de test)
+
+En `C:\PaqSystems\PaqAgent\appsettings.local.json`:
+
+```json
+"gatewayUrl": "https://gateway-dev.paqsystems.com/agent-hub"
+```
+
+Restart-Service PaqAgent. Online se mira en PaqSuite **DEV**.
+
+## Gateway DEV
+
+Ya está en el aire (`Paq-Gateway-IA-DEV`). Recetario de software = el de prod (§3 del MANUAL) con hostname `gateway-dev.paqsystems.com`. Crear/recrear la EC2 es **una sola vez**, una sola instalación: `docs/06-operacion/ficha-gateway-dev.md`.
+
+Keys: `C:\Programacion\KEYS\paq-gateway-ia-dev\` (no las de prod).
+
+```powershell
+ssh -i "$env:USERPROFILE\.ssh\pq-ia-gateway.pem" ec2-user@16.58.164.132
+```
+
+No cruzar DEV con `10.0.1.224` ni con `gateway.paqsystems.com`.
+
+# Cómo entrar por SSH al gateway AWS (producción)
+
+Desde PowerShell (prod `Paq-Gateway-IA`). DEV: ver tópico Ambiente DEV arriba.
 
 ```powershell
 ssh -i "$env:USERPROFILE\.ssh\pq-ia-gateway.pem" ec2-user@3.142.236.237
 ```
+
+# Cómo obtener el valor del agent_token
+
+SSH paso a paso (IP del Forge, `id_ed25519`, prompt `forge@paq-2021`): [MANUAL-DEL-PROGRAMADOR](../00-contexto/MANUAL-DEL-PROGRAMADOR.md), apartado **«Paso a paso (para Legos)»** dentro de § 4.a.
 
 # Cómo limpiar la variable ´sessionStorage'
 

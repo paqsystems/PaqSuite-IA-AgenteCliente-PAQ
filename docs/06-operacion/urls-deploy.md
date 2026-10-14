@@ -3,6 +3,8 @@
 | Rol | URL |
 |-----|-----|
 | Gateway producción (hub SignalR) | https://gateway.paqsystems.com/agent-hub |
+| Gateway DEV (hub SignalR) | https://gateway-dev.paqsystems.com/agent-hub |
+| Gateway DEV interno (Laravel jobs) | `http://10.0.1.22:5100` (instancia *Paq-Gateway-IA-DEV*) |
 | Gateway lab | http://127.0.0.1:5100/agent-hub |
 | Gateway interno (Laravel → jobs/status) | `http://10.0.1.224:5100` (instancia *Paq-Gateway-IA*; ver ficha) |
 | Descarga instalador (MVP, **público**, D9 / Q-D9-1 **cerrada**) | `https://descarga.paqsystems.com/agentes/` |

@@ -26,6 +26,7 @@ Si una justificación de este archivo choca con el SPEC, **manda el SPEC**. Se a
 | [2. Explicación técnica](#2-explicación-técnica--cómo-está-desarrollado) | Código, contratos, repos | Programador |
 | [3. Instalación del Gateway](#3-instalación-del-gateway-tarea-de-una-sola-vez) | EC2, Nginx, TLS, systemd | Soporte / ops (reconstruir AWS) |
 | [4. Alta de un cliente](#4-instalación-de-un-cliente--orden-de-ejecución) | Artisan → agente → `empresas_conexion` | Operador + admin Tango |
+| [4.e Ambiente DEV](#4e-ambiente-dev-pre-prod) | Distinciones Forge/Vercel/agente/gateway DEV | Ops / programador |
 | [4.d SQL del cliente](#4d-futuro--instalación-de-objetos-en-el-sql-del-cliente) | Objetos PQ / SP | Futuro (Fase 3) |
 | [5. Actualización del agente](#5-futuro--actualización-de-un-agente) | Nueva versión del binario | Futuro (Fase 2) |
 | [6. Actualización de versión SQL](#6-futuro--actualización-de-versión--objetos-sql-en-todos-los-clientes) | DDL en todos los SQL | Futuro (Fase 3) |
@@ -206,17 +207,18 @@ No entra todavía (Fases 2 y 3, [SPEC-AGW-002](../02-producto/agente-gateway/SPE
 
 El piloto de negocio es **un** stored procedure (`PAQ_Auth_Login`). No es “ya migró todo el esquema PQ”.
 
-### 1.9 Lab vs producción (no mezclarlos)
+### 1.9 Lab vs DEV vs producción (no mezclarlos)
 
-| | Lab en la PC del programador | Producción / piloto cliente |
-|--|------------------------------|------------------------------|
-| Gateway | `http://127.0.0.1:5100/agent-hub` | `https://gateway.paqsystems.com/agent-hub` |
-| Auth del agente | Stub Dev (`UseDevAuthStub=true`) | Laravel `POST /api/internal/gateway/authenticate` |
-| Token | `lab-token-manual` (solo lab) | El que imprimió Artisan en Forge |
-| SQL | Diccionario de lab, LAN | SQL Tango de ese servidor |
-| Config | `appsettings.local.json` a mano | Asistente `PaqAgentSetup.exe` |
+| | Lab en la PC | DEV (AWS pre-prod) | Producción / piloto cliente |
+|--|--------------|--------------------|------------------------------|
+| Gateway hub | `http://127.0.0.1:5100/agent-hub` | `https://gateway-dev.paqsystems.com/agent-hub` | `https://gateway.paqsystems.com/agent-hub` |
+| Laravel jobs | `http://127.0.0.1:5100` | `http://10.0.1.22:5100` | `http://10.0.1.224:5100` |
+| Auth del agente | Stub (`UseDevAuthStub=true`) | Laravel authenticate **real** (Forge DEV) | Laravel authenticate (Forge prod) |
+| Token | `lab-token-manual` (solo lab) | Artisan en `tango-paqsystems-dev` | Artisan en `tango-paqsystems` |
+| SQL | Diccionario de lab, LAN | SQL de la máquina de **test** | SQL Tango de ese cliente |
+| Config | `appsettings.local.json` a mano | Mismo JSON; `gatewayUrl` DEV | Asistente; `gatewayUrl` prod |
 
-El servicio Windows se llama igual (`PaqAgent`): no dejes el lab apuntando a localhost si vas a probar contra AWS.
+El servicio Windows se llama igual (`PaqAgent`). Un JSON no puede apuntar a dos hubs. Detalle operativo: [§ 4.e](#4e-ambiente-dev-pre-prod).
 
 ---
 
@@ -392,7 +394,7 @@ Copia ops de keys del Gateway (fuera de git): `C:\Programacion\KEYS\paq-gateway-
 
 ## 3. Instalación del Gateway (tarea de una sola vez)
 
-Esta sección es para **soporte técnico** que deba **reconstruir** el puente en AWS. Se hace **una vez** por ambiente (hoy: producción). No se repite por cada cliente.
+Esta sección es para **soporte técnico** que deba **reconstruir** el puente en AWS. Se hace **una vez por ambiente**. Producción: `Paq-Gateway-IA`. DEV: `Paq-Gateway-IA-DEV` ([ficha-gateway-dev.md](../06-operacion/ficha-gateway-dev.md); uso diario en [§ 4.e](#4e-ambiente-dev-pre-prod)). No se repite por cada cliente.
 
 Runbook corto: [deploy-gateway-aws.md](../06-operacion/deploy-gateway-aws.md).  
 Bitácora de la instalación real *2026-09-05*: [instalacion-exhaustiva-paq-gateway-ia.md](../06-operacion/deploy/instalacion-exhaustiva-paq-gateway-ia.md).
@@ -775,16 +777,17 @@ Piezas:
 
 El usuario `ubuntu` de la consola AWS arranca en `~`. Ahí **no hay** `artisan`. Un `Could not open input file: artisan` no significa que falte el comando: significa que no estás en la carpeta de Laravel. Los avisos de `sqlsrv.so` son ruido: esta alta usa MySQL del catálogo.
 
-```bash
-ls /home/forge
-sudo find /home/forge -name artisan -type f 2>/dev/null
+Si el SSH es `forge@…` (prompt `forge@paq-2021`), **no uses `sudo`**: ya sos `forge` y `sudo` pide password. El `php` del PATH es **7.4** y el código pide **≥ 8.1**: hay que llamar **`php8.1 artisan`**, no `php artisan`. En Forge el sitio activo está en `current/backend`.
 
-sudo -iu forge
-cd /home/forge/<dominio-del-sitio>
-cd backend    # si artisan está en backend/
-php artisan list --raw | grep alta-agente
-php artisan empresas-conexion:alta-agente tecser "Tec-Ser"
+Verificado 2026-10-12 en `paq-2021`: el comando **existe** en el sitio **dev**. En `tango-paqsystems.on-forge.com` `current` apunta a `releases/000000` y `php artisan` / `php8.1 artisan list` **no** listan `alta-agente`.
+
+```bash
+cd /home/forge/tango-paqsystems-dev.on-forge.com/current/backend
+php8.1 artisan list --raw | grep alta-agente
+php8.1 artisan empresas-conexion:alta-agente tecser "Tec-Ser"
 ```
+
+Solo si entraste como `ubuntu` (consola AWS): `sudo -iu forge` y después el mismo `cd` + `php8.1 artisan`.
 
 Solo dos argumentos: `cliente` (slug = `X-Paq-Cliente` / subdominio) y `nombre` (etiqueta visible).
 
@@ -805,13 +808,13 @@ Anotá los tres valores en un lugar seguro (no en un ticket público). El token 
 Si ya había agente y hay que rotar:
 
 ```bash
-php artisan empresas-conexion:alta-agente tecser "Tec-Ser" --force-replace
+php8.1 artisan empresas-conexion:alta-agente tecser "Tec-Ser" --force-replace
 ```
 
 Si `grep alta-agente` no lista nada: esa rama **no está deployada**. Primero el CD de `FRAMEWORK` (docs de TANGO `docs/06-operacion/cd-framework-vercel-forge.md`). Después, si hace falta, migrar catálogo:
 
 ```bash
-php artisan migrate --database=tenants_catalog --path=database/migrations/tenants_catalog --force
+php8.1 artisan migrate --database=tenants_catalog --path=database/migrations/tenants_catalog --force
 ```
 
 `cliente` y `nombre` **no tienen que existir de antemano**. Si el tenant **ya** estaba en SQL directo, usá **el mismo** `cliente` para no crear un huérfano.
@@ -823,26 +826,29 @@ php artisan migrate --database=tenants_catalog --path=database/migrations/tenant
      ó ssh forge@13.59.42.169
     b) Debe aparecer el prompt : forge@paq-2021:~$
 
-2) ir al sitio : 
-  ls /home/forge
-  sudo find /home/forge -name artisan -type f 2>/dev/null
+2) ir al sitio (sin sudo; usar `php8.1`, no `php`):
+  cd /home/forge/<nombre-sitio>.on-forge.com/current/backend
 
-  sudo -iu forge
-  cd /home/forge/<dominio-del-sitio>
-  cd backend    # si artisan está en backend/
+  <nombre-sitio> : Ejemplo : *tango-paqsystems*
 
-  <dominio-del-sitio> : en principio : "tango-paqsystems.on-forge.com"
+3) Obtener el Token
 
-3) Comprobante que el comando existe : 
-   a) php artisan list --raw | grep alta-agente
-   b) Si no existe, dar de alta : 
-   php artisan empresas-conexion:alta-agente <slug> "<Nombre visible>"
+php8.1 artisan list --raw | grep alta-agente
+php8.1 artisan empresas-conexion:alta-agente <slug>> "<Nombre visible>"
 
-   si ya existe el cliente y hay que cambiar el token : 
-   php artisan empresas-conexion:alta-agente <slug> "<Nombre visible>" --force-replace
+si ya existe el cliente y hay que cambiar el token:
 
-   <slug> : ejemplo : "tecser", "lacapol", "tecmetal"
-   <Nombre visible> : por ejemplo : "Tango Tecser" - "Tango TecMetal"
+php8.1 artisan empresas-conexion:alta-agente <slug>> "<Nombre visible>" --force-replace
+
+donde <slug> : ejemplo : "tecser", "tecmetal", "lacapol"
+      <Nombre visibe> : ejemplo : "Tango Tecser", "Tango Tec-Metal", "Lacapol"
+
+configuraciones concretas :
+| Servidor | Deploy     | tenant     |
+|----------|------------|------------|
+| tecser   | preview    | dev        |
+| paq-gauss| produccion | paqsystems |
+| lenovo   | produccion | demo       |
 
 4) Anotá lo que imprime en claro una sola vez:
 client_id = el slug
@@ -926,6 +932,102 @@ Si `agent_id` está vacío, ese tenant **no** es modo agente: Laravel puede segu
 4. Solo entonces repetir 4.b (o `--force-replace` + reinstalar el token en el asistente).
 
 **Si 4.a sí se corrió y el agente no autentica:** revisar esta fila primero (ids, `activo`, que no haya dos tenants con slugs parecidos). Después: token del JSON local vs el que se imprimió; URL del hub; keys Gateway↔Laravel.
+
+### 4.e) Ambiente DEV (pre-prod)
+
+Antes de desplegar a producción se usa un circuito **completo y separado**: Vercel Preview/DEV, Forge `tango-paqsystems-dev`, Gateway `Paq-Gateway-IA-DEV`, **una** instalación de agente de test. Cloudsmith es **el mismo** feed y la **misma** versión que después usa prod (no hay canal prerelease).
+
+No es lab (`127.0.0.1` + stub). El gateway DEV autentica contra Laravel DEV (`UseDevAuthStub=false`).
+
+#### Distinciones (qué cambia vs prod)
+
+| Pieza | Producción | DEV |
+|--------|------------|-----|
+| Forge (artisan + jobs) | `tango-paqsystems.on-forge.com` | `tango-paqsystems-dev.on-forge.com` |
+| `AGENT_GATEWAY_URL` | `http://10.0.1.224:5100` | `http://10.0.1.22:5100` |
+| `AGENT_GATEWAY_INTERNAL_KEY` | keys de `Paq-Gateway-IA` | keys **propias** DEV (`C:\Programacion\KEYS\paq-gateway-ia-dev\`) |
+| Hub del agente (`gatewayUrl`) | `https://gateway.paqsystems.com/agent-hub` | `https://gateway-dev.paqsystems.com/agent-hub` |
+| SSH Gateway | `ec2-user@3.142.236.237` | `ec2-user@16.58.164.132` (PEM `pq-ia-gateway`) |
+| `LaravelApi__BaseUrl` (en el Gateway) | IP/host del Laravel **prod** | `https://tango-paqsystems-dev.on-forge.com` |
+| Vercel `VITE_API_URL` | API prod | `https://tango-paqsystems-dev.on-forge.com/api` |
+| `alta-agente` | site prod | **solo** site DEV (`cd /home/forge/tango-paqsystems-dev.on-forge.com/current/backend`) |
+| `empresas_conexion` / `APP_KEY` | catálogo prod | catálogo DEV (no copiar filas) |
+
+Alta + instalador: mismos pasos que § 4.a / 4.b, con el **site DEV** y el **hub DEV**. En el asistente (o en `appsettings.local.json` si ya está instalado) el único campo de red que cambia es:
+
+```json
+"gatewayUrl": "https://gateway-dev.paqsystems.com/agent-hub"
+```
+
+Después: `Stop-Service PaqAgent` / `Start-Service PaqAgent`. Verificar online en el PaqSuite **DEV**, no en prod.
+
+No cruzar: Laravel DEV → `10.0.1.224`; agente de test → `gateway.paqsystems.com`; token de un Forge en el otro.
+
+#### Paso a paso (para Legos) — DEV
+
+Mismo Forge (`paq-2021`), **otro site**. No uses `tango-paqsystems` (eso es prod).
+
+1) Powershell (como administrador)
+    a) ssh -i "$env:USERPROFILE\.ssh\id_ed25519" forge@13.59.42.169
+     ó ssh forge@13.59.42.169
+    b) Debe aparecer el prompt : forge@paq-2021:~$
+
+2) ir al sitio **DEV** (sin sudo; usar `php8.1`, no `php`):
+  cd /home/forge/tango-paqsystems-dev.on-forge.com/current/backend
+
+  <nombre-sitio> : *tango-paqsystems-dev*  (no *tango-paqsystems*)
+
+3) Obtener el Token
+
+php8.1 artisan list --raw | grep alta-agente
+php8.1 artisan empresas-conexion:alta-agente <slug> "<Nombre visible>"
+
+si ya existe el cliente y hay que cambiar el token:
+
+php8.1 artisan empresas-conexion:alta-agente <slug> "<Nombre visible>" --force-replace
+
+donde <slug> : ejemplo : "tecser", "tecmetal", "lacapol"
+      <Nombre visible> : ejemplo : "Tango Tecser", "Tango Tec-Metal", "Lacapol"
+
+configuraciones concretas (este circuito = columna Deploy **preview** / tenant **dev**):
+| Servidor | Deploy     | tenant     | Dónde corre el artisan |
+|----------|------------|------------|------------------------|
+| tecser   | preview    | dev        | `tango-paqsystems-dev` |
+| paq-gauss| produccion | paqsystems | **no** este tópico (usar Legos de § 4.a) |
+| lenovo   | produccion | demo       | **no** este tópico (usar Legos de § 4.a) |
+
+4) Anotá lo que imprime en claro una sola vez:
+client_id = el slug
+agent_id = {slug}-agent-01
+token = 64 caracteres hex (no dev-agent-token)
+
+estos datos, se cargan en la instalación del agente de **test**.
+
+5) En el asistente (o en `C:\PaqSystems\PaqAgent\appsettings.local.json` si ya está instalado):
+
+| Campo | Qué poner (DEV) |
+|--------|-----------------|
+| AgentId / ClientId / AgentToken | Los de este artisan (los de prod **no** sirven) |
+| Gateway URL | `https://gateway-dev.paqsystems.com/agent-hub` |
+| SQL | Servidor, base **diccionario**, usuario y clave de la máquina de test |
+| encrypt / trustServerCertificate | Igual que SSMS |
+
+Si el JSON ya existía, alcanza con cambiar `gatewayUrl` y reiniciar:
+
+```powershell
+Stop-Service PaqAgent
+Start-Service PaqAgent
+Get-Service PaqAgent
+Get-Content C:\PaqSystems\PaqAgent\appsettings.local.json
+```
+
+6) Online se mira en PaqSuite **DEV** (Vercel Preview → `https://tango-paqsystems-dev.on-forge.com/api`), no en prod.
+
+Si el alta se hizo en el site prod u otro `APP_KEY`, el Gateway DEV rechaza el token aunque “Probar Gateway” haya dado OK.
+
+#### Recrear el Gateway DEV (no es el día a día)
+
+El recetario de software es el de **§ 3** (Nginx, .NET 8, systemd, certbot) con hostname `gateway-dev.paqsystems.com` y `LaravelApi__BaseUrl` al site DEV. IDs, EIP, SG y lista de variables: **una sola vez**, una sola EC2 → [ficha-gateway-dev.md](../06-operacion/ficha-gateway-dev.md).
 
 ### 4.d) FUTURO — instalación de objetos en el SQL del cliente
 
@@ -1185,6 +1287,7 @@ HU-003 / HU-008 y el C1 de TR-009 se escribieron en parte contra el D9 viejo (zi
 | Lab en esta PC | [lab-local.md](../06-operacion/lab-local.md) |
 | URLs | [urls-deploy.md](../06-operacion/urls-deploy.md) |
 | Instructivo admin Tango | [instalacion-agente.md](../06-operacion/instalacion-agente.md) |
+| Ambiente DEV (pre-prod) | [§ 4.e](#4e-ambiente-dev-pre-prod) · ficha única [ficha-gateway-dev.md](../06-operacion/ficha-gateway-dev.md) |
 | Runbook Gateway corto | [deploy-gateway-aws.md](../06-operacion/deploy-gateway-aws.md) |
 | Bitácora EC2 real | [instalacion-exhaustiva](../06-operacion/deploy/instalacion-exhaustiva-paq-gateway-ia.md) |
 | Fases 2/3 | [fases-roadmap.md](../02-producto/fases-roadmap.md) |
