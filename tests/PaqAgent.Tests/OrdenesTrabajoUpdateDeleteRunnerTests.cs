@@ -22,7 +22,7 @@ public class OrdenesTrabajoUpdateDeleteRunnerTests
         Assert.Contains("id_orden_trabajo", deleteDef.JobParameters);
         Assert.Contains("usuario_codigo", deleteDef.JobParameters);
 
-        Assert.Equal(66, PartesCatalog.Operations.Count);
+        Assert.Equal(67, PartesCatalog.Operations.Count);
     }
 
     [Fact]

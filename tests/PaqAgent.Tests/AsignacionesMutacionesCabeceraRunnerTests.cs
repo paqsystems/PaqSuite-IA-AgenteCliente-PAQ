@@ -28,7 +28,7 @@ public class AsignacionesMutacionesCabeceraRunnerTests
         Assert.Equal(PartesResponseShape.AsignacionCancelar, can.Shape);
         Assert.Contains("usuario_id", can.JobParameters);
 
-        Assert.Equal(66, PartesCatalog.Operations.Count);
+        Assert.Equal(67, PartesCatalog.Operations.Count);
     }
 
     [Fact]

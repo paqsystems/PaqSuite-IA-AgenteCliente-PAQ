@@ -15,7 +15,7 @@ public class AsignacionesCreateRunnerTests
         Assert.Contains("fecha_asignacion", def.JobParameters);
         Assert.Contains("id_tipo_tarea", def.JobParameters);
         Assert.Contains("usuario_id", def.JobParameters);
-        Assert.Equal(66, PartesCatalog.Operations.Count);
+        Assert.Equal(67, PartesCatalog.Operations.Count);
     }
 
     [Fact]

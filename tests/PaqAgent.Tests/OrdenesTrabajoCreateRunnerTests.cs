@@ -15,7 +15,7 @@ public class OrdenesTrabajoCreateRunnerTests
         Assert.Contains("id_articulo", def.JobParameters);
         Assert.Contains("operaciones_incluidas_json", def.JobParameters);
         Assert.Contains("usuario_id", def.JobParameters);
-        Assert.Equal(66, PartesCatalog.Operations.Count);
+        Assert.Equal(67, PartesCatalog.Operations.Count);
     }
 
     [Fact]

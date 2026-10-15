@@ -10,11 +10,14 @@ public class PartesGatewayRunnerTests
     [Fact]
     public void Catalog_containsThirtyPartesOps()
     {
-        Assert.Equal(66, PartesCatalog.Operations.Count);
+        Assert.Equal(67, PartesCatalog.Operations.Count);
         Assert.True(PartesCatalog.TryGet("PartesProduccion.Parametros.List", out var paramsDef));
         Assert.Equal("dbo.PAQ_PartesProduccion_ParametrosList", paramsDef.StoredProcedure);
         Assert.True(PartesCatalog.TryGet("PartesProduccion.InformesGestion.List", out var informesDef));
         Assert.Equal("dbo.PAQ_PartesProduccion_InformesGestion", informesDef.StoredProcedure);
+        Assert.True(PartesCatalog.TryGet("PartesProduccion.Dashboard.Get", out var dashboardDef));
+        Assert.Equal("dbo.PAQ_PartesProduccion_DashboardGet", dashboardDef.StoredProcedure);
+        Assert.Equal(PartesResponseShape.DashboardGet, dashboardDef.Shape);
         Assert.True(PartesCatalog.TryGet("PartesProduccion.Maquinas.List", out var maquinasListDef));
         Assert.Equal("dbo.PAQ_PartesProduccion_MaquinasList", maquinasListDef.StoredProcedure);
         Assert.True(PartesCatalog.TryGet("PartesProduccion.Maquinas.Get", out var maquinasDef));

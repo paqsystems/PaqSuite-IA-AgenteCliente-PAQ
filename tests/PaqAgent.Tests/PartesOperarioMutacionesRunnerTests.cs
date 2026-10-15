@@ -36,7 +36,7 @@ public class PartesOperarioMutacionesRunnerTests
         Assert.True(PartesCatalog.TryGet("PartesProduccion.PartesOperario.Cerrar", out var cerrarDef));
         Assert.Equal(PartesResponseShape.ParteOperarioCerrar, cerrarDef.Shape);
 
-        Assert.Equal(66, PartesCatalog.Operations.Count);
+        Assert.Equal(67, PartesCatalog.Operations.Count);
     }
 
     [Fact]

@@ -312,6 +312,7 @@ public sealed class PartesGatewayRunner
             {
                 PartesResponseShape.Parametros => Ok(BuildParametros(resultSets)),
                 PartesResponseShape.InformesGestion => Ok(BuildInformesGestion(resultSets)),
+                PartesResponseShape.DashboardGet => Ok(BuildDashboardGet(resultSets)),
                 PartesResponseShape.MaquinaList => Ok(BuildMaquinaList(resultSets)),
                 PartesResponseShape.MaquinaGet => BuildMaquinaGet(resultSets),
                 PartesResponseShape.MaquinaCreate => BuildMaquinaMutation(resultSets, "crear"),
@@ -364,6 +365,46 @@ public sealed class PartesGatewayRunner
         return new Dictionary<string, object?>
         {
             ["parametros"] = filas.Select(MapParametro).ToList()
+        };
+    }
+
+    private static object BuildDashboardGet(IReadOnlyList<IReadOnlyList<Dictionary<string, object?>>> resultSets)
+    {
+        var kpisRow = resultSets.ElementAtOrDefault(0)?.FirstOrDefault();
+        var kpis = kpisRow is null
+            ? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            : Keyed(kpisRow);
+        var operarios = resultSets.ElementAtOrDefault(1) ?? Array.Empty<Dictionary<string, object?>>();
+        var maquinas = resultSets.ElementAtOrDefault(2) ?? Array.Empty<Dictionary<string, object?>>();
+
+        return new Dictionary<string, object?>
+        {
+            ["partes_abiertos"] = GetInt(kpis, "partes_abiertos") ?? 0,
+            ["partes_enviados"] = GetInt(kpis, "partes_enviados") ?? 0,
+            ["partes_aprobados"] = GetInt(kpis, "partes_aprobados") ?? 0,
+            ["partes_cerrados"] = GetInt(kpis, "partes_cerrados") ?? 0,
+            ["horas_productivas"] = (double)(GetDecimal(kpis, "horas_productivas") ?? 0m),
+            ["horas_improductivas"] = (double)(GetDecimal(kpis, "horas_improductivas") ?? 0m),
+            ["top_operarios"] = operarios.Select(row =>
+            {
+                var keyed = Keyed(row);
+                return new Dictionary<string, object?>
+                {
+                    ["id_operario"] = GetInt(keyed, "id_operario") ?? 0,
+                    ["nombre"] = GetString(keyed, "nombre") ?? string.Empty,
+                    ["horas_productivas"] = (double)(GetDecimal(keyed, "horas_productivas") ?? 0m)
+                };
+            }).ToList(),
+            ["top_maquinas"] = maquinas.Select(row =>
+            {
+                var keyed = Keyed(row);
+                return new Dictionary<string, object?>
+                {
+                    ["id_maquina"] = GetInt(keyed, "id_maquina") ?? 0,
+                    ["codigo"] = GetString(keyed, "codigo") ?? string.Empty,
+                    ["horas_productivas"] = (double)(GetDecimal(keyed, "horas_productivas") ?? 0m)
+                };
+            }).ToList()
         };
     }
 

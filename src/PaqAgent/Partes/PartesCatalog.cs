@@ -4,6 +4,7 @@ public enum PartesResponseShape
 {
     Parametros,
     InformesGestion,
+    DashboardGet,
     MaquinaList,
     MaquinaGet,
     MaquinaCreate,
@@ -107,6 +108,17 @@ public static class PartesCatalog
                     ["id_orden_trabajo"] = "IdOrdenTrabajo"
                 },
                 PartesResponseShape.InformesGestion),
+            ["PartesProduccion.Dashboard.Get"] = new(
+                "PartesProduccion.Dashboard.Get",
+                "dbo.PAQ_PartesProduccion_DashboardGet",
+                new[] { "fecha_desde", "fecha_hasta", "id_turno" },
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["fecha_desde"] = "FechaDesde",
+                    ["fecha_hasta"] = "FechaHasta",
+                    ["id_turno"] = "IdTurno"
+                },
+                PartesResponseShape.DashboardGet),
             ["PartesProduccion.Maquinas.List"] = new(
                 "PartesProduccion.Maquinas.List",
                 "dbo.PAQ_PartesProduccion_MaquinasList",

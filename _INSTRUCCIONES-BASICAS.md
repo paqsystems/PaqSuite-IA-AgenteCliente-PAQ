@@ -4,6 +4,7 @@ Ver `docs\06-operacion\README.md`
 
 en Resumen : 
 - Agente : `docs/06-operacion/instalacion-agente.md`
+    Descarga del instalador (alta en servidor cliente): `https://descarga.paqsystems.com/agentes/PaqAgentSetup.exe` (landing `https://descarga.paqsystems.com/agentes/`). Build, SHA256 y subida a S3: `docs/06-operacion/empaquetado-instalador.md`.
     El paso a paso para instalar, con obtención de token está en MANUAL-DEL-PROGRAMADOR.md (ver abajo), capítulo `## 4. Instalación de un cliente — orden de ejecución`
 - Gateway 
     (corto) :`docs/06-operacion/deploy-gateway-aws.md`

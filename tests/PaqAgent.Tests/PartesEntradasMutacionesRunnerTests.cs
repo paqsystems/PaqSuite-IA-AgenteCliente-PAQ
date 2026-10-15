@@ -33,7 +33,7 @@ public class PartesEntradasMutacionesRunnerTests
         Assert.Contains("notas_revision", reclasificarDef.JobParameters);
         Assert.Contains("usuario_id", reclasificarDef.JobParameters);
 
-        Assert.Equal(66, PartesCatalog.Operations.Count);
+        Assert.Equal(67, PartesCatalog.Operations.Count);
     }
 
     [Fact]

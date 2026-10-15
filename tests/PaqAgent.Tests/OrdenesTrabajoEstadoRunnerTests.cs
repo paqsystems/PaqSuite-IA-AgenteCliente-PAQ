@@ -22,7 +22,7 @@ public class OrdenesTrabajoEstadoRunnerTests
         Assert.Contains("ids_json", masivoDef.JobParameters);
         Assert.Contains("operacion", masivoDef.JobParameters);
 
-        Assert.Equal(66, PartesCatalog.Operations.Count);
+        Assert.Equal(67, PartesCatalog.Operations.Count);
     }
 
     [Fact]

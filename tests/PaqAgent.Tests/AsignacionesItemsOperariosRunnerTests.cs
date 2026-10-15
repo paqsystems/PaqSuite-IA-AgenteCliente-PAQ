@@ -31,7 +31,7 @@ public class AsignacionesItemsOperariosRunnerTests
         Assert.True(PartesCatalog.TryGet("PartesProduccion.Asignaciones.Items.Operarios.Delete", out var opDelete));
         Assert.Contains("id_operario", opDelete.JobParameters);
 
-        Assert.Equal(66, PartesCatalog.Operations.Count);
+        Assert.Equal(67, PartesCatalog.Operations.Count);
     }
 
     [Fact]

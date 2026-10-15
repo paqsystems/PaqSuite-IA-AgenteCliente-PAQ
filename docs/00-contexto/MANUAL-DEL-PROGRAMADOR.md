@@ -346,7 +346,7 @@ WinForms, asistente de 5 pasos (`WizardForm`):
 3. Copiar binarios (payload zip embebido, o carpeta `agent/` en lab), escribir `appsettings.local.json`, registrar servicio `PaqAgent` `start=auto`.
 4. Resultado: servicio Running + “esperando online en PaqSuite”.
 
-Empaquetado de cara al cliente: un solo `PaqAgentSetup.exe` (D9). Build: `.\scripts\pack-installer.ps1` → `artifacts/PaqAgentSetup.exe` + `.sha256`. Detalle: [empaquetado-instalador.md](../06-operacion/empaquetado-instalador.md).
+Empaquetado de cara al cliente: un solo `PaqAgentSetup.exe` (D9). Descarga pública: `https://descarga.paqsystems.com/agentes/PaqAgentSetup.exe` (landing `https://descarga.paqsystems.com/agentes/`, hash `.sha256` al lado). Build local: `.\scripts\pack-installer.ps1` → `artifacts/PaqAgentSetup.exe` + `.sha256`. Detalle: [empaquetado-instalador.md](../06-operacion/empaquetado-instalador.md).
 
 “Probar Gateway” **no** autentica el token. Solo mira si hay salida 443/TLS. El login del token ocurre cuando arranca el servicio.
 
@@ -861,7 +861,7 @@ estos datos, se cargan en la instalación del agente.
 
 Con los tres valores del artisan, en el Windows **al lado de SQL** (o en un Windows de la misma LAN que alcance SQL):
 
-1. Descargar **`PaqAgentSetup.exe`** de la landing pública TANGO ([urls-deploy.md](../06-operacion/urls-deploy.md); URL exacta = **Q-D9-1**, placeholder `https://<host-tango>/descargas/agente`). Mientras Q-D9-1 esté abierto, el exe de build está en `artifacts/PaqAgentSetup.exe` de este repo.
+1. Descargar **`PaqAgentSetup.exe`** desde `https://descarga.paqsystems.com/agentes/PaqAgentSetup.exe` (landing `https://descarga.paqsystems.com/agentes/`; verificar SHA256 con el `.sha256` publicado). Mapa de URLs: [urls-deploy.md](../06-operacion/urls-deploy.md). Empaquetado y publicación: [empaquetado-instalador.md](../06-operacion/empaquetado-instalador.md). En lab sin internet al bucket, el build local está en `artifacts/PaqAgentSetup.exe` de este repo.
 2. Verificar SHA256:
 
    ```powershell
@@ -1081,7 +1081,7 @@ Canal canónico de descarga: el mismo de D9 (landing TANGO + SHA256). GitHub Rel
 Si hay que actualizar un piloto **hoy**:
 
 1. Empaquetar: `.\scripts\pack-installer.ps1`.
-2. Publicar exe + SHA256 en la landing (cuando Q-D9-1 exista) o entregarlo por el canal interno de ops.
+2. Publicar exe + SHA256 en `https://descarga.paqsystems.com/agentes/` ([empaquetado-instalador.md](../06-operacion/empaquetado-instalador.md), [descarga-agentes-aws.md](../06-operacion/descarga-agentes-aws.md)) o entregarlo por canal interno de ops si aún no hay release en S3.
 3. En el servidor del cliente: detener el servicio `PaqAgent`, reemplazar binarios **sin** borrar `appsettings.local.json`, iniciar el servicio.
 4. Confirmar online y un `diagnostics.run` / login.
 
@@ -1163,9 +1163,17 @@ Cuando exista el SPEC formal, esta sección se reemplaza por el procedimiento op
 
 **Decisión normativa:** [D9](../02-producto/decisiones-tecnicas.md#d9--descarga-del-instalador-cerrado-2026-09-06-url-exacta-pendiente) · SPEC §5.1.
 
-**Empaquetado:** [empaquetado-instalador.md](../06-operacion/empaquetado-instalador.md) · `scripts/pack-installer.ps1`.
+**Empaquetado y canal público:** [empaquetado-instalador.md](../06-operacion/empaquetado-instalador.md) · `scripts/pack-installer.ps1` · alta AWS/S3: [descarga-agentes-aws.md](../06-operacion/descarga-agentes-aws.md).
 
-**URL exacta:** pregunta abierta **Q-D9-1**. Placeholder: `https://<host-tango>/descargas/agente`. No inventar el host.
+**URL canónica (Q-D9-1 cerrada 2026-10-12):**
+
+| Qué | URL |
+|-----|-----|
+| Landing | `https://descarga.paqsystems.com/agentes/` |
+| Instalador | `https://descarga.paqsystems.com/agentes/PaqAgentSetup.exe` |
+| SHA256 | `https://descarga.paqsystems.com/agentes/PaqAgentSetup.exe.sha256` |
+
+Tabla resumida: [urls-deploy.md](../06-operacion/urls-deploy.md).
 
 ### Qué entregamos al administrador del servidor Tango
 
@@ -1233,7 +1241,7 @@ En un servidor Tango eso se rompe seguido: se pierde `agent/`, queda un nido de 
 | Este | `scripts/pack-installer.ps1` → `artifacts/PaqAgentSetup.exe` + `.sha256` |
 | TANGO | Landing pública (versión, fecha, SHA256, instructivo, botón); servir o redirigir el exe. **No** commitear el binario |
 
-### Contenido mínimo de la landing TANGO (cuando exista)
+### Contenido mínimo de la landing (estática en `/agentes/`)
 
 - Título: instalador PaqAgent.
 - Versión y fecha del asset.
@@ -1247,9 +1255,9 @@ En un servidor Tango eso se rompe seguido: se pierde `agent/`, queda un nido de 
 
 MVP: SHA256 del **único** archivo. Authenticode = fase 2. No bloquear el piloto por la firma Microsoft.
 
-### Cómo cerrar Q-D9-1
+### Q-D9-1 (cerrada)
 
-Cuando el operador elija host y path: actualizar D9, [urls-deploy.md](../06-operacion/urls-deploy.md) y [instalacion-agente.md](../06-operacion/instalacion-agente.md). **No** reabrir el formato del artefacto. Implementar la landing en TANGO (TR nueva allá).
+Host `descarga.paqsystems.com`, path `/agentes`. Fuente de verdad operativa: [empaquetado-instalador.md](../06-operacion/empaquetado-instalador.md), [urls-deploy.md](../06-operacion/urls-deploy.md), [instalacion-agente.md](../06-operacion/instalacion-agente.md). Un botón futuro en PaqSuite apunta a la **misma** URL; no reabrir el formato del artefacto (`PaqAgentSetup.exe`).
 
 ### Cómo empaquetar (mapa rápido)
 
@@ -1268,7 +1276,7 @@ HU-003 / HU-008 y el C1 de TR-009 se escribieron en parte contra el D9 viejo (zi
 - Tailscale como requisito de producto o camino de producción del Gateway/agentes.
 - Fallback SQL directo si el tenant tiene `agent_id`.
 - `dev-agent-token`.
-- Inventar la URL pública (Q-D9-1).
+- Usar URL de descarga distinta a la canónica sin actualizar docs (Q-D9-1 cerrada).
 - Entregar zip o SFX al cliente.
 - Publicar `/internal/*` en Nginx.
 - `UseDevAuthStub=true` en el servidor.
@@ -1286,6 +1294,7 @@ HU-003 / HU-008 y el C1 de TR-009 se escribieron en parte contra el D9 viejo (zi
 | Qué está cerrado | [decisiones-tecnicas.md](../02-producto/decisiones-tecnicas.md) |
 | Lab en esta PC | [lab-local.md](../06-operacion/lab-local.md) |
 | URLs | [urls-deploy.md](../06-operacion/urls-deploy.md) |
+| Descarga / empaquetado `PaqAgentSetup.exe` | [empaquetado-instalador.md](../06-operacion/empaquetado-instalador.md) |
 | Instructivo admin Tango | [instalacion-agente.md](../06-operacion/instalacion-agente.md) |
 | Ambiente DEV (pre-prod) | [§ 4.e](#4e-ambiente-dev-pre-prod) · ficha única [ficha-gateway-dev.md](../06-operacion/ficha-gateway-dev.md) |
 | Runbook Gateway corto | [deploy-gateway-aws.md](../06-operacion/deploy-gateway-aws.md) |
