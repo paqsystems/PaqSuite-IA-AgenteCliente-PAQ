@@ -8,6 +8,7 @@ public sealed class AgentOptions
     public string GatewayUrl { get; set; } = "";
     public SqlOptions Sql { get; set; } = new();
     public SqlMigrationOptions SqlMigrations { get; set; } = new();
+    public InstallationOptions Installation { get; set; } = new();
 
     public bool HasRequiredIdentity =>
         !string.IsNullOrWhiteSpace(AgentId)
@@ -24,6 +25,13 @@ public sealed class SqlMigrationOptions
 {
     public bool Enabled { get; set; } = true;
     public int CommandTimeoutSeconds { get; set; } = 30;
+}
+
+/// <summary>Release train desplegado en el servidor del agente (GEN-34).</summary>
+public sealed class InstallationOptions
+{
+    /// <summary>Ruta absoluta o relativa al directorio de trabajo del servicio.</summary>
+    public string? PackRoot { get; set; }
 }
 
 public sealed class SqlOptions

@@ -51,6 +51,9 @@ public static class JobOperations
     public const string ComprobantesRecientes = "comprobantes.recientes";
     public const string TangoVersion = "tango.version";
     public const string ParametrosUpdate = "parametros.update";
+    public const string InstallationInstall = "installation.install";
+    public const string InstallationUpdate = "installation.update";
+    public const string CompanyProvision = "company.provision";
 }
 
 public sealed class JobRequest

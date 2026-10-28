@@ -10,6 +10,7 @@ using PaqAgent.Comprobantes;
 using PaqAgent.Diagnostics;
 using PaqAgent.Database;
 using PaqAgent.Informes;
+using PaqAgent.Installation;
 using PaqAgent.Menu;
 using PaqAgent.MovimientosTesoreria;
 using PaqAgent.Options;
@@ -59,6 +60,7 @@ public sealed class AgentGatewayConnector : BackgroundService
     private readonly AcopiosGatewayRunner acopiosGatewayRunner;
     private readonly PartesGatewayRunner partesGatewayRunner;
     private readonly ParametrosGatewayRunner parametrosGatewayRunner;
+    private readonly InstallationGatewayRunner installationGatewayRunner;
     private readonly OrdenesTrabajoCreateRunner ordenesTrabajoCreateRunner;
     private readonly OrdenesTrabajoUpdateRunner ordenesTrabajoUpdateRunner;
     private readonly OrdenesTrabajoDeleteRunner ordenesTrabajoDeleteRunner;
@@ -129,6 +131,7 @@ public sealed class AgentGatewayConnector : BackgroundService
         AcopiosGatewayRunner acopiosGatewayRunner,
         PartesGatewayRunner partesGatewayRunner,
         ParametrosGatewayRunner parametrosGatewayRunner,
+        InstallationGatewayRunner installationGatewayRunner,
         OrdenesTrabajoCreateRunner ordenesTrabajoCreateRunner,
         OrdenesTrabajoUpdateRunner ordenesTrabajoUpdateRunner,
         OrdenesTrabajoDeleteRunner ordenesTrabajoDeleteRunner,
@@ -194,6 +197,7 @@ public sealed class AgentGatewayConnector : BackgroundService
         this.acopiosGatewayRunner = acopiosGatewayRunner;
         this.partesGatewayRunner = partesGatewayRunner;
         this.parametrosGatewayRunner = parametrosGatewayRunner;
+        this.installationGatewayRunner = installationGatewayRunner;
         this.ordenesTrabajoCreateRunner = ordenesTrabajoCreateRunner;
         this.ordenesTrabajoUpdateRunner = ordenesTrabajoUpdateRunner;
         this.ordenesTrabajoDeleteRunner = ordenesTrabajoDeleteRunner;
@@ -751,6 +755,56 @@ public sealed class AgentGatewayConnector : BackgroundService
                 DurationMs = (long)(timeProvider.GetUtcNow() - started).TotalMilliseconds
             };
         }
+        else if (string.Equals(request.Operation, JobOperations.InstallationInstall, StringComparison.Ordinal)
+                 || string.Equals(request.Operation, JobOperations.InstallationUpdate, StringComparison.Ordinal))
+        {
+            logger.LogInformation(
+                "Ejecutando {Operation} jobId={JobId} traceId={TraceId}",
+                request.Operation,
+                request.JobId,
+                request.TraceId);
+            var installOutcome = await installationGatewayRunner
+                .RunInstallOrUpdateStepAsync(
+                    agentOptions,
+                    request.Parameters,
+                    request.TimeoutSeconds,
+                    CancellationToken.None)
+                .ConfigureAwait(false);
+            result = new JobResult
+            {
+                TraceId = request.TraceId,
+                JobId = request.JobId,
+                Status = installOutcome.Status,
+                Data = installOutcome.Data,
+                ErrorCode = installOutcome.ErrorCode,
+                ErrorMessage = installOutcome.ErrorMessage,
+                DurationMs = (long)(timeProvider.GetUtcNow() - started).TotalMilliseconds
+            };
+        }
+        else if (string.Equals(request.Operation, JobOperations.CompanyProvision, StringComparison.Ordinal))
+        {
+            logger.LogInformation(
+                "Ejecutando company.provision jobId={JobId} traceId={TraceId}",
+                request.JobId,
+                request.TraceId);
+            var provisionOutcome = await installationGatewayRunner
+                .RunCompanyProvisionAsync(
+                    agentOptions,
+                    request.Parameters,
+                    request.TimeoutSeconds,
+                    CancellationToken.None)
+                .ConfigureAwait(false);
+            result = new JobResult
+            {
+                TraceId = request.TraceId,
+                JobId = request.JobId,
+                Status = provisionOutcome.Status,
+                Data = provisionOutcome.Data,
+                ErrorCode = provisionOutcome.ErrorCode,
+                ErrorMessage = provisionOutcome.ErrorMessage,
+                DurationMs = (long)(timeProvider.GetUtcNow() - started).TotalMilliseconds
+            };
+        }
         else if (PartesCatalog.TryGet(request.Operation, out var partesDefinition))
         {
             logger.LogInformation(
@@ -1181,7 +1235,7 @@ public sealed class AgentGatewayConnector : BackgroundService
                 Status = JobStatuses.Failed,
                 ErrorCode = "OPERATION_NOT_ALLOWED",
                 ErrorMessage =
-                    $"operation '{request.Operation}' not in whitelist (shell + D1–D5 + D6 + Seguridad admin + AsientosContables)",
+                    $"operation '{request.Operation}' not in whitelist (shell + D1–D6 + Seguridad + AsientosContables + GEN-34 installation)",
                 DurationMs = (long)(timeProvider.GetUtcNow() - started).TotalMilliseconds
             };
         }
